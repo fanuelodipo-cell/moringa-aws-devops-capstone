@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Moringa AWS DevOps Capstone - ECS Fargate web application
+
+Parameters:
+  ImageUri:
+    Type: String
+    Default: 325657596892.dkr.ecr.eu-west-2.amazonaws.com/moringa-capstone-web:latest
+    Description: Existing application image in Amazon ECR
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Default: subnet-074b17f31f9cf3590,subnet-0bd3eef5730c1a846
+    Description: Existing public subnets
+
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: sg-0749d28704ce02309
+    Description: Existing security group allowing HTTP port 80
+
+Resources:
+  CapstoneECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: moringa-capstone-cfn-cluster
+
+  CapstoneTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: moringa-capstone-cfn-task
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: '256'
+      Memory: '512'
+      ExecutionRoleArn: arn:aws:iam::325657596892:role/capstone-ecs-TaskExecutionRole-3utj76R5UK7O
+      ContainerDefinitions:
+        - Name: moringa-capstone-web
+          Image: !Ref ImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/moringa-capstone-cfn-task
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  CapstoneLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/moringa-capstone-cfn-task
+      RetentionInDays: 7
+
+  CapstoneECSService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - CapstoneLogGroup
+    Properties:
+      ServiceName: moringa-capstone-cfn-service
+      Cluster: !Ref CapstoneECSCluster
+      TaskDefinition: !Ref CapstoneTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref WebSecurityGroup
+
+Outputs:
+  ClusterName:
+    Description: CloudFormation-managed ECS cluster
+    Value: !Ref CapstoneECSCluster
+
+  ServiceName:
+    Description: CloudFormation-managed ECS service
+    Value: !GetAtt CapstoneECSService.Name
+
+  TaskDefinitionArn:
+    Description: ECS task definition
+    Value: !Ref CapstoneTaskDefinition

@@ -1,0 +1,30 @@
+{
+  "family": "moringa-capstone-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::325657596892:role/CapstoneECSTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "moringa-capstone-web",
+      "image": "325657596892.dkr.ecr.eu-west-2.amazonaws.com/moringa-capstone-web:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/moringa-capstone-task",
+          "awslogs-region": "eu-west-2",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
